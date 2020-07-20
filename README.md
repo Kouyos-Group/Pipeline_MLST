@@ -2,17 +2,21 @@
 
 by Judith Bergadà Pijuan
 
-This pipeline is a tool to perform the assemlby of paired-end sequencing reads
-and to scan the resulting contig files against PubMLST typing schemes.
+This pipeline is aimed to perform the assembly and annotation of paired-end
+sequencing reads, as well as to scan the resulting contig files against
+PubMLST typing schemes.
 Given multiple paired-end sequencing reads (FASTQ files),
 it provides a tab-separated table showing the matching PubMLST per paired-files,
 their ST (sequence type), and their allele IDs.
+It also provides the de novo assembly of the sequencing reads
+and their annotation.
 
 ## Installation
 
 To use this pipeline, you need to install the following dependencies:
 - SPAdes
 - MLST
+- Prokka
 
 Later, you need to download the tool:
 ```bash
@@ -23,7 +27,7 @@ git clone https://github.com/judithbergada/Pipeline_MLST
 ## Usage
 
 The pipeline expects you to have the following folder:
-- FASTQ folder: this is a folder containg only your sequencing reads (FASTQ files).
+- FASTQ folder: this is a folder containing only your sequencing reads (FASTQ files).
 You must have all your FASTQ files here, and it is important that the pairs of files have the
 same prefix in the name.
 
@@ -36,10 +40,10 @@ To get information about the usage, please try:
 The MLST tool can be used with these parameters:
 
 ```
-Usage: mlstpipeline     [-h or --help]
-                        [-f or --fastqfolder]
-                        [-o or --outname]
-                        [-t or --threads]
+Usage: mlstpipeline.sh    [-h or --help]
+                          [-f or --fastqfolder]
+                          [-o or --outname]
+                          [-t or --threads]
 
 Optional arguments:
     -h, --help:
@@ -60,4 +64,3 @@ Required arguments:
 ```
 
 Enjoy using the tool!
-

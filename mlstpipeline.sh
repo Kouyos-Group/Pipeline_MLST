@@ -9,10 +9,10 @@ set -e
 # Define usage of the script
 function print_usage {
   printf """
-Usage: mlstpipeline     [-h or --help]
-                        [-f or --fastqfolder]
-                        [-o or --outname]
-                        [-t or --threads]
+Usage: mlstpipeline.sh    [-h or --help]
+                          [-f or --fastqfolder]
+                          [-o or --outname]
+                          [-t or --threads]
 """
 }
 # Describe usage of the tool and provide help
@@ -86,6 +86,12 @@ if ! [ -x "$(command -v spades.py)" ]; then
   echo "https://github.com/ablab/spades"
   exit 127
 fi
+if ! [ -x "$(command -v prokka)" ]; then
+  echo "Missing: Prokka not found"
+  echo "Information on the installation:"
+  echo "https://github.com/tseemann/prokka"
+  exit 127
+fi
 echo "Required software is properly installed."
 
 
@@ -150,7 +156,11 @@ for i in $(seq 2  2 ${end}); do
   # Perform assembly with spades
   spades.py -1 ${fastqfolder}/${filefirst} \
     -2 ${fastqfolder}/${filesecond} \
-    --careful --threads ${threads} --cov-cutoff auto -o ${outn}_$i
+    --careful --threads ${threads} --cov-cutoff auto -o ${outn}_${i}/assembly
+  # Concatenate contigs into one long sequence that could be used as reference
+  echo ">Assembly" > ${outn}_${i}/assembly/ref_assembly.fasta
+  sed '/^>/d' ${outn}_${i}/assembly/contigs.fasta >> \
+    ${outn}_${i}/assembly/ref_assembly.fasta
 done
 
 #####################################
@@ -172,7 +182,8 @@ for i in $(seq 2  2 ${end}); do
   else
     fname=${filefirst%.*}
   fi
-  cp ${outn}_${i}/contigs.fasta tmp_mlst/${fname}.fasta
+  # Copy the contig results to the temporal folder
+  cp ${outn}_${i}/assembly/contigs.fasta tmp_mlst/${fname}.fasta
 done
 
 ###########################
@@ -181,8 +192,37 @@ done
 
 mlst -t ${threads} -q tmp_mlst/* > ${outn}.tsv
 
+###############################
+## Compute Prokka annotation ##
+###############################
+
+for i in $(seq 2  2 ${end}); do
+  # Compute annotation
+  prokka --outdir ${outn}_${i}/annotation --prefix prokka --cpus ${threads} \
+    ${outn}_${i}/assembly/contigs.fasta
+done
+
+
 ###########################
 ## Remove temporal files ##
 ###########################
 
 rm -r tmp_mlst
+
+################################################
+## Rename folders for an easier understanding ##
+################################################
+
+for i in $(seq 2  2 ${end}); do
+  # Get name of the file
+  filefirst=$(ls -1q ${fastqfolder} | head -n$i | tail -n1)
+  # Check if file is compressed and get file name without the extension
+  if file --mime-type ${fastqfolder}/${filefirst} | grep -q gzip; then
+    nameext=${filefirst%.*}
+    fname=${nameext%.*}
+  else
+    fname=${filefirst%.*}
+  fi
+  # Move the folder to a new name matching the files names
+  mv ${outn}_${i} ${outn}_${fname}
+done
