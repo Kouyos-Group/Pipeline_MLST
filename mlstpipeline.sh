@@ -145,6 +145,7 @@ echo "Optional inputs seem correct."
 ## Perfrom Reads Assembly ##
 ############################
 
+printf "\nPerforming genome assemblies...\n"
 # Count number of files that are found in the folder
 end=$(ls -1q ${fastqfolder} | wc -l)
 
@@ -162,6 +163,8 @@ for i in $(seq 2  2 ${end}); do
   sed '/^>/d' ${outn}_${i}/assembly/contigs.fasta >> \
     ${outn}_${i}/assembly/ref_assembly.fasta
 done
+echo "Genome assemblies finished sucessfully."
+
 
 #####################################
 ## Copy results to temporal folder ##
@@ -186,21 +189,27 @@ for i in $(seq 2  2 ${end}); do
   cp ${outn}_${i}/assembly/contigs.fasta tmp_mlst/${fname}.fasta
 done
 
+
 ###########################
 ## Perform MLST analysis ##
 ###########################
 
-mlst -t ${threads} -q tmp_mlst/* > ${outn}.tsv
+printf "\nPerforming MLST analysis...\n"
+mlst -t ${threads} -q tmp_mlst/* > ${outn}_MLST.tsv
+echo "MLST analysis finished sucessfully."
+
 
 ###############################
 ## Compute Prokka annotation ##
 ###############################
 
+printf "\nPerforming gene annotations...\n"
 for i in $(seq 2  2 ${end}); do
   # Compute annotation
   prokka --outdir ${outn}_${i}/annotation --prefix prokka --cpus ${threads} \
     ${outn}_${i}/assembly/contigs.fasta
 done
+echo "Gene annotations finished sucessfully."
 
 
 ###########################
@@ -209,10 +218,12 @@ done
 
 rm -r tmp_mlst
 
+
 ################################################
 ## Rename folders for an easier understanding ##
 ################################################
 
+printf "\nOrdering output files...\n"
 for i in $(seq 2  2 ${end}); do
   # Get name of the file
   filefirst=$(ls -1q ${fastqfolder} | head -n$i | tail -n1)
@@ -226,3 +237,13 @@ for i in $(seq 2  2 ${end}); do
   # Move the folder to a new name matching the files names
   mv ${outn}_${i} ${outn}_${fname}
 done
+
+# Remove final directory if existing and create new one with all permissions
+rm -rf ${outn} && \
+  mkdir ${outn} && \
+  chmod +xwr ${outn}
+
+# Move outputs inside final directory
+mv ${outn}_* ${outn}
+echo "Done!"
+echo "All analyses finished sucessfully. Good luck with the results!"
