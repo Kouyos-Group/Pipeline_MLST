@@ -13,6 +13,7 @@ Usage: mlstpipeline.sh    [-h or --help]
                           [-f or --fastqfolder]
                           [-o or --outname]
                           [-t or --threads]
+                          [-c or --conversion]
 """
 }
 # Describe usage of the tool and provide help
@@ -30,6 +31,9 @@ Optional arguments:
                 Number of threads that will be used.
                 It must be an integer.
                 Default: 8.
+    -c, --conversion:
+                If required, create a GTF annotation file.
+                Default: create only the default annotation files from Prokka.
 Required arguments:
     -f, --fastqfolder:
                 Path to the folder that contains ALL your FASTQ files.
@@ -45,20 +49,22 @@ for ARGS in "$@"; do
                 "--fastqfolder") set -- "$@" "-f" ;;
                 "--outname") set -- "$@" "-o" ;;
                 "--threads") set -- "$@" "-t" ;;
+                "--conversion") set -- "$@" "-c" ;;
                 "--help") set -- "$@" "-h" ;;
                 *) set - "$@" "$ARGS"
         esac
 done
 
 # Define defaults
-outn="mymlst"; threads=8
+outn="mymlst"; threads=8; conversion=0
 
 # Define all parameters
-while getopts 'f:o::t::h' flag; do
+while getopts 'f:o::t::ch' flag; do
         case "${flag}" in
                 f) fastqfolder=${OPTARG} ;;
                 o) outn=${OPTARG} ;;
                 t) threads=${OPTARG} ;;
+                c) conversion=${OPTARG} ;;
                 h) print_help
                    exit 1;;
                 *) print_usage
@@ -91,6 +97,15 @@ if ! [ -x "$(command -v prokka)" ]; then
   echo "Information on the installation:"
   echo "https://github.com/tseemann/prokka"
   exit 127
+fi
+if [[ $conversion != 0 ]]; then
+  if ! [ -x "$(command -v agat_convert_sp_gff2gtf.pl)" ]; then
+    echo "Missing: agat_convert_sp_gff2gtf.pl not found"
+    echo "Information on the installation:"
+    echo "https://github.com/NBISweden/AGAT"
+    echo "If Agat is already installed, reactivate the conda environment."
+    exit 127
+  fi
 fi
 echo "Required software is properly installed."
 
@@ -163,7 +178,7 @@ for i in $(seq 2  2 ${end}); do
   sed '/^>/d' ${outn}_${i}/assembly/contigs.fasta >> \
     ${outn}_${i}/assembly/ref_assembly.fasta
 done
-echo "Genome assemblies finished sucessfully."
+echo "Genome assemblies finished successfully."
 
 
 #####################################
@@ -196,7 +211,7 @@ done
 
 printf "\nPerforming MLST analysis...\n"
 mlst -t ${threads} -q tmp_mlst/* > ${outn}_MLST.tsv
-echo "MLST analysis finished sucessfully."
+echo "MLST analysis finished successfully."
 
 
 ###############################
@@ -209,7 +224,7 @@ for i in $(seq 2  2 ${end}); do
   prokka --outdir ${outn}_${i}/annotation --prefix prokka --cpus ${threads} \
     ${outn}_${i}/assembly/contigs.fasta
 done
-echo "Gene annotations finished sucessfully."
+echo "Gene annotations finished successfully."
 
 
 ###########################
@@ -217,6 +232,20 @@ echo "Gene annotations finished sucessfully."
 ###########################
 
 rm -r tmp_mlst
+
+
+######################################
+## Convert prokka.gff to prokka.gtf ##
+######################################
+
+if [[ $conversion != 0 ]]; then
+	printf "\nConverting gff to gtf...\n"
+  for i in $(seq 2  2 ${end}); do
+		agat_convert_sp_gff2gtf.pl --gff ${outn}_${i}/annotation/prokka.gff \
+      -o ${outn}_${i}/annotation/prokka.gtf
+	done
+	echo "Conversion finished successfully."
+fi
 
 
 ################################################
@@ -246,4 +275,4 @@ rm -rf ${outn} && \
 # Move outputs inside final directory
 mv ${outn}_* ${outn}
 echo "Done!"
-echo "All analyses finished sucessfully. Good luck with the results!"
+echo "All analyses finished successfully. Good luck with the results!"
