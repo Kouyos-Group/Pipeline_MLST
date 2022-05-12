@@ -17,6 +17,7 @@ To use this pipeline, you need to install the following dependencies:
 - SPAdes
 - MLST
 - Prokka
+- Agat (only if a GTF file is needed)
 
 Later, you need to download the tool:
 ```bash
@@ -44,6 +45,7 @@ Usage: mlstpipeline.sh    [-h or --help]
                           [-f or --fastqfolder]
                           [-o or --outname]
                           [-t or --threads]
+                          [-c or --conversion]
 
 Optional arguments:
     -h, --help:
@@ -56,6 +58,9 @@ Optional arguments:
                 Number of threads that will be used.
                 It must be an integer.
                 Default: 8.
+    -c, --conversion:
+                If required, create a GTF annotation file.
+                Default: create only the default annotation files from Prokka.
 Required arguments:
     -f, --fastqfolder:
                 Path to the folder that contains ALL your FASTQ files.
